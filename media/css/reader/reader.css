@@ -12238,20 +12238,52 @@ form.opml_import_form input {
     white-space: nowrap;
 }
 
+.NB-modal-feedchooser.NB-feedchooser-standard {
+    display: flex;
+    flex-direction: row-reverse;
+}
+
 .NB-modal-feedchooser .NB-feedchooser-type {
     width: 300px;
     margin: 0 52px 0 26px;
     padding: 0;
+    flex: 0 0 300px;
+}
+
+.NB-modal-feedchooser .NB-feedchooser-type.NB-feedchooser-left {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    margin: 0 26px 0 26px;
 }
 
 .NB-modal-feedchooser .NB-feedchooser-type.NB-right {
-    margin: 0 0 0 0;
+    margin: 0 24px 0 0;
     width: 425px;
     padding: 0 0 0 42px;
-    margin-right: 24px;
-    float: right;
+    flex: 0 0 425px;
     position: relative;
     border-left: 1px solid #B0B0B0;
+}
+
+.NB-feedchooser-feeds-container {
+    flex: 1 1 auto;
+    overflow: hidden;
+    min-height: 200px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.NB-feedchooser-feeds-container .NB-feedlist {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.NB-modal-feedchooser .NB-feedchooser-form {
+    flex: 0 0 auto;
+    margin-top: 10px;
 }
 
 .NB-modal-feedchooser .NB-feedchooser-type.NB-right .NB-feedchooser-info {
@@ -13034,6 +13066,11 @@ form.opml_import_form input {
 }
 
 /* Feedchooser segmented controls */
+li.NB-feedchooser-premium-toggle-container,
+li.NB-feedchooser-archive-toggle-container {
+    padding-right: 12px !important;
+}
+
 .NB-feedchooser-premium-toggle-wrapper,
 .NB-feedchooser-archive-toggle-wrapper {
     display: block;
@@ -13051,13 +13088,21 @@ form.opml_import_form input {
 
 .NB-feedchooser-premium-multiplier li,
 .NB-feedchooser-archive-multiplier li {
-    padding: 8px 16px;
+    padding: 8px 16px !important;
     line-height: 1;
     flex: 1;
     text-align: center;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-top: none !important;
+}
+
+.NB-feedchooser-premium-1x,
+.NB-feedchooser-premium-2x,
+.NB-feedchooser-archive-1x,
+.NB-feedchooser-archive-2x {
+    padding: 8px 16px !important;
 }
 
 /* Pro subscription slider */

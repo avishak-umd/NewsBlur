@@ -113,7 +113,7 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                                 $.make('div', { className: 'NB-feedchooser-premium-toggle-wrapper' }, [
                                     $.make('ul', { className: 'segmented-control NB-feedchooser-premium-multiplier' }, [
                                         $.make('li', { className: 'NB-feedchooser-premium-1x NB-active', 'data-multiplier': '1' }, 'Standard'),
-                                        $.make('li', { className: 'NB-feedchooser-premium-2x', 'data-multiplier': '2' }, 'Double (2×)')
+                                        $.make('li', { className: 'NB-feedchooser-premium-2x', 'data-multiplier': '2' }, 'Premium Plus')
                                     ])
                                 ])
                             ])
@@ -240,7 +240,7 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                                 $.make('div', { className: 'NB-feedchooser-archive-toggle-wrapper' }, [
                                     $.make('ul', { className: 'segmented-control NB-feedchooser-archive-multiplier' }, [
                                         $.make('li', { className: 'NB-feedchooser-archive-1x NB-active', 'data-multiplier': '1' }, 'Standard'),
-                                        $.make('li', { className: 'NB-feedchooser-archive-2x', 'data-multiplier': '2' }, 'Double (2×)')
+                                        $.make('li', { className: 'NB-feedchooser-archive-2x', 'data-multiplier': '2' }, 'Premium Archive Plus')
                                     ])
                                 ])
                             ])
@@ -496,7 +496,9 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                     $.make('div', { className: 'NB-feedchooser-info-reset NB-splash-link' }, 'Turn every site on'),
                     $.make('div', { className: 'NB-feedchooser-info-counts' })
                 ])),
-                this.make_feeds(),
+                $.make('div', { id: 'NB-feedchooser-feeds', className: 'NB-feedchooser-feeds-container' }, [
+                    this.make_feeds()
+                ]),
                 $.make('form', { className: 'NB-feedchooser-form' }, [
                     $.make('div', { className: 'NB-modal-submit' }, [
                         // $.make('div', { className: 'NB-modal-submit-or' }, 'or'),
@@ -627,13 +629,27 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
     },
 
     resize_modal: function (previous_height) {
-        var content_height = $('.NB-feedchooser-left', this.$modal).height() + 54;
-        var container_height = this.$modal.parent().height();
-        if (content_height > container_height && previous_height != content_height) {
-            var chooser_height = $('#NB-feedchooser-feeds').height();
-            var diff = Math.max(4, content_height - container_height);
-            $('#NB-feedchooser-feeds').css({ 'max-height': chooser_height - diff });
-            _.defer(_.bind(function () { this.resize_modal(content_height); }, this), 1);
+        var $left = $('.NB-feedchooser-left', this.$modal);
+        var $feedsContainer = $('#NB-feedchooser-feeds', this.$modal);
+        var $modalParent = this.$modal.parent();
+        var modalParentHeight = $modalParent.height();
+        
+        // Calculate space taken by other elements in the left column
+        var headerHeight = $('.NB-feedchooser-info', $left).outerHeight(true) || 0;
+        var formHeight = $('.NB-feedchooser-form', $left).outerHeight(true) || 0;
+        var modalPadding = parseInt(this.$modal.css('padding-top')) + parseInt(this.$modal.css('padding-bottom')) || 0;
+        var containerMargins = parseInt($feedsContainer.css('margin-top')) + parseInt($feedsContainer.css('margin-bottom')) || 0;
+        var padding = 60; // Additional buffer for spacing
+        
+        // Calculate available height for feeds container
+        var availableHeight = modalParentHeight - headerHeight - formHeight - modalPadding - containerMargins - padding;
+        
+        console.log('Resize modal - modalParentHeight:', modalParentHeight, 'headerHeight:', headerHeight, 
+                    'formHeight:', formHeight, 'availableHeight:', availableHeight);
+        
+        // Set max-height on the feeds container
+        if (availableHeight > 200) {
+            $feedsContainer.css({ 'max-height': availableHeight + 'px' });
         }
     },
 
@@ -983,10 +999,11 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
     
     update_premium_pricing: function (multiplier) {
         var base_price = 36;
-        var base_feeds = 1000;
+        var standard_feeds = 1000;
+        var plus_feeds = 5000;
         
         var price = base_price * multiplier;
-        var feeds = base_feeds * multiplier;
+        var feeds = multiplier === 1 ? standard_feeds : plus_feeds;
         
         // Update feed count display
         $('.NB-feedchooser-premium-feed-count', this.$modal).text(this.format_number(feeds));
@@ -997,10 +1014,11 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
     
     update_archive_pricing: function (multiplier) {
         var base_price = 99;
-        var base_feeds = 1000;
+        var standard_feeds = 1000;
+        var plus_feeds = 5000;
         
         var price = base_price * multiplier;
-        var feeds = base_feeds * multiplier;
+        var feeds = multiplier === 1 ? standard_feeds : plus_feeds;
         
         // Update feed count display
         $('.NB-feedchooser-archive-feed-count', this.$modal).text(this.format_number(feeds));

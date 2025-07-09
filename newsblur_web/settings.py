@@ -273,7 +273,9 @@ DAYS_OF_STORY_HASHES_ARCHIVE = DAYS_OF_UNREAD_ARCHIVE
 
 # Maximum number of subscriptions per account type
 MAX_SUBSCRIPTIONS_PREMIUM = 1000
+MAX_SUBSCRIPTIONS_PREMIUM_PLUS = 5000
 MAX_SUBSCRIPTIONS_ARCHIVE = 1000
+MAX_SUBSCRIPTIONS_ARCHIVE_PLUS = 5000
 MAX_SUBSCRIPTIONS_PRO = 1000  # Base for Pro, increases with subscription count
 
 # SUBSCRIBER_EXPIRE sets the number of days after which a user who hasn't logged in
