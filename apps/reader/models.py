@@ -450,20 +450,19 @@ class UserSubscription(models.Model):
         feed = None
         us = None
 
-        # Check subscription limit
+        # Check subscription limit and determine if feed should be auto-activated
         active_subs = cls.objects.filter(user=user, active=True).count()
         subscription_limit = user.profile.subscription_limit()
-        if active_subs >= subscription_limit:
-            code = -1
-            if user.profile.is_pro:
-                message = f"You have reached the maximum limit of {subscription_limit} feeds for Premium Pro accounts."
-            elif user.profile.is_archive:
-                message = f"You have reached the maximum limit of {subscription_limit} feeds for Premium Archive accounts. Please upgrade to Premium Pro to add more feeds."
-            elif user.profile.is_premium:
-                message = f"You have reached the maximum limit of {subscription_limit} feeds for Premium accounts. Please upgrade to Premium Archive to add more feeds."
-            else:
-                message = f"Free accounts are limited to {subscription_limit} feeds. Please upgrade to a premium account to add more feeds."
-            return code, message, None
+        over_limit = active_subs >= subscription_limit
+        
+        # Override auto_active if user is over their limit
+        if over_limit and auto_active:
+            auto_active = False
+            logging.user(
+                user,
+                "~FYUser over subscription limit (%s/%s), adding feed as inactive"
+                % (active_subs, subscription_limit)
+            )
 
         logging.user(
             user,
@@ -511,6 +510,17 @@ class UserSubscription(models.Model):
             if auto_active or user.profile.is_premium:
                 us.active = True
                 us.save()
+            
+            # Set appropriate message if feed was added as inactive due to limit
+            if us and not us.active and over_limit:
+                if user.profile.is_pro:
+                    message = f"Feed added but inactive. You've reached your limit of {subscription_limit} feeds."
+                elif user.profile.is_archive:
+                    message = f"Feed added but inactive. You've reached your limit of {subscription_limit} feeds. Upgrade to Premium Pro for more feeds."
+                elif user.profile.is_premium:
+                    message = f"Feed added but inactive. You've reached your limit of {subscription_limit} feeds. Upgrade to Premium Archive for more feeds."
+                else:
+                    message = f"Feed added but inactive. Free accounts are limited to {subscription_limit} feeds. Upgrade to Premium for more feeds."
 
             if not skip_fetch and feed.last_update < datetime.datetime.utcnow() - datetime.timedelta(days=1):
                 feed = feed.update(verbose=True)

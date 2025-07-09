@@ -82,7 +82,13 @@ class Profile(models.Model):
 
     def subscription_limit(self):
         if self.is_pro:
-            return settings.MAX_SUBSCRIPTIONS_PRO
+            # Pro users get sliding scale: 1000 base + 500 for each 500 feeds they have
+            from apps.reader.models import UserSubscription
+
+            current_subs = UserSubscription.objects.filter(user=self.user).count()
+            # Calculate how many 500-feed increments they need
+            increments = max(0, (current_subs - settings.MAX_SUBSCRIPTIONS_PRO) // 500) + 1
+            return settings.MAX_SUBSCRIPTIONS_PRO + (increments * 500)
         elif self.is_archive:
             return settings.MAX_SUBSCRIPTIONS_ARCHIVE
         elif self.is_premium:
@@ -325,6 +331,7 @@ class Profile(models.Model):
         was_pro = self.is_pro
         self.is_premium = True
         self.is_archive = True
+        self.is_pro = False
         self.save()
         self.user.is_active = True
         self.user.save()
@@ -384,13 +391,13 @@ class Profile(models.Model):
         EmailNewPremiumPro.delay(user_id=self.user.pk)
 
         subs = UserSubscription.objects.filter(user=self.user)
-        if subs.count() > settings.MAX_SUBSCRIPTIONS_PRO:
-            logging.user(self.user, "~FR~SK~FW~SBWARNING! ~FR%s subscriptions~SN!" % (subs.count()))
+        # Pro users don't have a hard limit, just log if they have a lot of feeds
+        if subs.count() > 3000:
+            logging.user(self.user, "~FR~SK~FW~SBNOTICE: ~FR%s subscriptions~SN!" % (subs.count()))
             mail_admins(
-                f"WARNING! {self.user.username} has {subs.count()} subscriptions",
-                f"{self.user.username} has {subs.count()} subscriptions and just upgraded to pro. They'll need a refund: {self.user.profile.paypal_sub_id} {self.user.profile.stripe_id} {self.user.email}",
+                f"NOTICE: {self.user.username} has {subs.count()} subscriptions",
+                f"{self.user.username} has {subs.count()} subscriptions and just upgraded to pro.",
             )
-            return False
 
         was_premium = self.is_premium
         was_archive = self.is_archive

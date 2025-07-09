@@ -3711,7 +3711,7 @@
             // NEWSBLUR.log(["make_manage_menu", type, feed_id, story_id, inverse, $item]);
 
             if (type == 'site') {
-                var show_chooser = !NEWSBLUR.Globals.is_premium && NEWSBLUR.Globals.is_authenticated;
+                var show_chooser = NEWSBLUR.Globals.is_authenticated && !NEWSBLUR.Globals.is_pro;
                 $manage_menu = $.make('ul', { className: 'NB-menu-manage' }, [
                     $.make('li', { className: 'NB-menu-manage-site-info' }, [
                         $.make('div', { className: 'NB-menu-manage-image' }),
@@ -3791,10 +3791,18 @@
                         $.make('div', { className: 'NB-menu-manage-image' }),
                         $.make('div', { className: 'NB-menu-manage-title' }, 'Preferences')
                     ]),
-                    (show_chooser && $.make('li', { className: 'NB-menu-separator' })),
+                    ((show_chooser || NEWSBLUR.Globals.is_pro) && $.make('li', { className: 'NB-menu-separator' })),
                     (show_chooser && $.make('li', { className: 'NB-menu-item NB-menu-manage-premium', role: "button" }, [
                         $.make('div', { className: 'NB-menu-manage-image' }),
-                        $.make('div', { className: 'NB-menu-manage-title' }, 'Upgrade to premium')
+                        $.make('div', { className: 'NB-menu-manage-title' }, 
+                            NEWSBLUR.Globals.is_archive ? 'Upgrade to Pro' :
+                            NEWSBLUR.Globals.is_premium ? 'Upgrade to Premium Archive' :
+                            'Upgrade to Premium'
+                        )
+                    ])),
+                    (NEWSBLUR.Globals.is_pro && $.make('li', { className: 'NB-menu-item NB-menu-manage-premium', role: "button" }, [
+                        $.make('div', { className: 'NB-menu-manage-image' }),
+                        $.make('div', { className: 'NB-menu-manage-title' }, 'Premium Plans')
                     ])),
                     $.make('li', { className: 'NB-menu-separator' }),
                     $.make('li', { className: 'NB-menu-item NB-menu-manage-font' }, [

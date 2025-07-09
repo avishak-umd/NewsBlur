@@ -70,17 +70,17 @@ def opml_upload(request):
                 payload = dict(folders=folders, feeds=feeds)
                 logging.user(request, "~FR~SBOPML Upload: ~SK%s~SN~SB~FR feeds" % (len(feeds)))
                 
-                # Check if feeds were skipped due to limit
+                # Check if feeds were added as inactive due to limit
                 if hasattr(opml_importer, 'skipped_feeds') and opml_importer.skipped_feeds:
                     profile = request.user.profile
                     if profile.is_pro:
-                        message = f"Import complete. Some feeds were skipped as you've reached the {profile.subscription_limit()} feed limit for Premium Pro."
+                        message = f"Import complete. Some feeds were added as inactive as you've reached the {profile.subscription_limit()} feed limit for Premium Pro."
                     elif profile.is_archive:
-                        message = f"Import complete. Some feeds were skipped as you've reached the {profile.subscription_limit()} feed limit. Upgrade to Premium Pro for up to 2000 feeds."
+                        message = f"Import complete. Some feeds were added as inactive as you've reached the {profile.subscription_limit()} feed limit. Upgrade to Premium Pro for more feeds."
                     elif profile.is_premium:
-                        message = f"Import complete. Some feeds were skipped as you've reached the {profile.subscription_limit()} feed limit. Upgrade to Premium Archive for up to 1500 feeds."
+                        message = f"Import complete. Some feeds were added as inactive as you've reached the {profile.subscription_limit()} feed limit. Upgrade to Premium Archive for more feeds."
                     else:
-                        message = f"Import complete. Some feeds were skipped as free accounts are limited to {profile.subscription_limit()} feeds. Upgrade to Premium for more feeds."
+                        message = f"Import complete. Some feeds were added as inactive. Free accounts are limited to {profile.subscription_limit()} active feeds. Upgrade to Premium for more feeds."
                 
                 from apps.social.models import MActivity
 

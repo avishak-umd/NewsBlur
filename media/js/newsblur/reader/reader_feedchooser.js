@@ -35,7 +35,24 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
     runner: function () {
         var self = this;
         this.start = new Date();
-        this.MAX_FEEDS = 64;
+        
+        // Define format_number method early
+        this.format_number = function(num) {
+            return parseInt(num).toLocaleString();
+        };
+        
+        // Set feed limits based on user type
+        if (NEWSBLUR.Globals.is_pro) {
+            // Pro users have a sliding scale
+            var current_feeds = _.size(NEWSBLUR.assets.feeds);
+            this.MAX_FEEDS = 1000 + Math.max(0, Math.floor((current_feeds - 1000) / 500) + 1) * 500;
+        } else if (NEWSBLUR.Globals.is_archive) {
+            this.MAX_FEEDS = 1000;
+        } else if (NEWSBLUR.Globals.is_premium) {
+            this.MAX_FEEDS = 1000;
+        } else {
+            this.MAX_FEEDS = 64;
+        }
 
         NEWSBLUR.assets.feeds.each(function (feed) {
             self.add_feed_to_decline(feed);
@@ -47,6 +64,9 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
         if (!this.options.premium_only) {
             this.initial_load_feeds();
         }
+        
+        // Initialize pro slider if applicable
+        this.setup_pro_slider();
 
         _.defer(_.bind(function () { this.update_counts(true); }, this));
 
@@ -76,13 +96,27 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                     $.make('div', { className: 'NB-feedchooser-info' }, [
                         $.make('div', { className: 'NB-feedchooser-info-type' }, [
                             'Premium Subscription',
-                            $.make('span', { className: 'NB-feedchooser-subtitle-type-price' }, '$36/year'),
+                            $.make('span', { className: 'NB-feedchooser-subtitle-type-price NB-feedchooser-premium-price' }, '$36/year'),
                         ])
                     ]),
                     $.make('ul', { className: 'NB-feedchooser-premium-bullets' }, [
-                        $.make('li', { className: 'NB-1' }, [
+                        $.make('li', { className: 'NB-0 NB-feedchooser-premium-toggle-container' }, [
                             $.make('div', { className: 'NB-feedchooser-premium-bullet-image' }),
-                            'Enable every site by going premium'
+                            $.make('div', { className: 'NB-feedchooser-premium-toggle-content' }, [
+                                $.make('div', { className: 'NB-feedchooser-premium-toggle-text' }, [
+                                    $.make('b', [
+                                        'Follow up to ',
+                                        $.make('span', { className: 'NB-feedchooser-premium-feed-count' }, '1,000'),
+                                        ' sites'
+                                    ])
+                                ]),
+                                $.make('div', { className: 'NB-feedchooser-premium-toggle-wrapper' }, [
+                                    $.make('ul', { className: 'segmented-control NB-feedchooser-premium-multiplier' }, [
+                                        $.make('li', { className: 'NB-feedchooser-premium-1x NB-active', 'data-multiplier': '1' }, 'Standard'),
+                                        $.make('li', { className: 'NB-feedchooser-premium-2x', 'data-multiplier': '2' }, 'Double (2×)')
+                                    ])
+                                ])
+                            ])
                         ]),
                         $.make('li', { className: 'NB-2' }, [
                             $.make('div', { className: 'NB-feedchooser-premium-bullet-image' }),
@@ -189,10 +223,28 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                     $.make('div', { className: 'NB-feedchooser-info' }, [
                         $.make('div', { className: 'NB-feedchooser-info-type' }, [
                             'Premium Archive Subscription',
-                            $.make('span', { className: 'NB-feedchooser-subtitle-type-price' }, '$99/year'),
+                            $.make('span', { className: 'NB-feedchooser-subtitle-type-price NB-feedchooser-archive-price' }, '$99/year'),
                         ])
                     ]),
                     $.make('ul', { className: 'NB-feedchooser-premium-bullets NB-feedchooser-premium-archive-bullets' }, [
+                        $.make('li', { className: 'NB-0 NB-feedchooser-archive-toggle-container' }, [
+                            $.make('div', { className: 'NB-feedchooser-premium-bullet-image' }),
+                            $.make('div', { className: 'NB-feedchooser-archive-toggle-content' }, [
+                                $.make('div', { className: 'NB-feedchooser-archive-toggle-text' }, [
+                                    $.make('b', [
+                                        'Follow up to ',
+                                        $.make('span', { className: 'NB-feedchooser-archive-feed-count' }, '1,000'),
+                                        ' sites'
+                                    ])
+                                ]),
+                                $.make('div', { className: 'NB-feedchooser-archive-toggle-wrapper' }, [
+                                    $.make('ul', { className: 'segmented-control NB-feedchooser-archive-multiplier' }, [
+                                        $.make('li', { className: 'NB-feedchooser-archive-1x NB-active', 'data-multiplier': '1' }, 'Standard'),
+                                        $.make('li', { className: 'NB-feedchooser-archive-2x', 'data-multiplier': '2' }, 'Double (2×)')
+                                    ])
+                                ])
+                            ])
+                        ]),
                         $.make('li', { className: 'NB-1' }, [
                             $.make('div', { className: 'NB-feedchooser-premium-bullet-image' }),
                             'Everything in the premium subscription, of course'
@@ -293,10 +345,32 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                     $.make('div', { className: 'NB-feedchooser-info' }, [
                         $.make('div', { className: 'NB-feedchooser-info-type' }, [
                             'Premium Pro Subscription',
-                            $.make('span', { className: 'NB-feedchooser-subtitle-type-price' }, '$29/month'),
+                            $.make('span', { className: 'NB-feedchooser-subtitle-type-price NB-feedchooser-pro-price' }, '$29/month'),
                         ])
                     ]),
                     $.make('ul', { className: 'NB-feedchooser-premium-bullets NB-feedchooser-premium-pro-bullets' }, [
+                        $.make('li', { className: 'NB-0 NB-feedchooser-pro-slider-container' }, [
+                            $.make('div', { className: 'NB-feedchooser-premium-bullet-image' }),
+                            $.make('div', { className: 'NB-feedchooser-pro-slider-content' }, [
+                                $.make('b', 'Follow up to '),
+                                $.make('span', { className: 'NB-feedchooser-pro-feed-count' }, '1,000'),
+                                $.make('b', ' sites'),
+                                $.make('div', { className: 'NB-feedchooser-pro-slider-wrapper' }, [
+                                    $.make('input', { 
+                                        type: 'range', 
+                                        className: 'NB-feedchooser-pro-slider',
+                                        min: '1000',
+                                        max: '10000',
+                                        step: '500',
+                                        value: '1000'
+                                    }),
+                                    $.make('div', { className: 'NB-feedchooser-pro-slider-labels' }, [
+                                        $.make('span', { className: 'NB-feedchooser-pro-slider-min' }, '1,000'),
+                                        $.make('span', { className: 'NB-feedchooser-pro-slider-max' }, '10,000')
+                                    ])
+                                ])
+                            ])
+                        ]),
                         $.make('li', { className: 'NB-1' }, [
                             $.make('div', { className: 'NB-feedchooser-premium-bullet-image' }),
                             'Everything in the premium archive subscription, of course'
@@ -389,6 +463,29 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                     $.make('div', { className: 'NB-feedchooser-info-counts' }),
                     $.make('div', { className: 'NB-feedchooser-info-sort' }, 'Auto-Selected By Popularity'),
                     $.make('div', { className: 'NB-feedchooser-info-reset NB-splash-link' }, 'Reset to popular sites')
+                ])),
+                (NEWSBLUR.Globals.is_premium && !this.options.chooser_only && $.make('div', { className: 'NB-feedchooser-info' }, [
+                    $.make('div', { className: 'NB-feedchooser-info-type' }, [
+                        $.make('span', { className: 'NB-feedchooser-info-type-name' },
+                            NEWSBLUR.Globals.is_pro ? 'PREMIUM PRO ACCOUNT' :
+                            NEWSBLUR.Globals.is_archive ? 'PREMIUM ARCHIVE ACCOUNT' :
+                            'PREMIUM ACCOUNT'
+                        ),
+                        $.make('span', { className: 'NB-feedchooser-subtitle-type-price' }, 
+                            NEWSBLUR.Globals.is_pro ? '$29/MONTH' :
+                            NEWSBLUR.Globals.is_archive ? '$99/YEAR' :
+                            '$36/YEAR'),
+                    ]),
+                    $.make('h2', { className: 'NB-modal-subtitle' }, [
+                        $.make('b', [
+                            'You can follow up to ' + this.format_number(this.MAX_FEEDS) + ' sites.'
+                        ]),
+                        $.make('br'),
+                        NEWSBLUR.Globals.is_pro ? 
+                            'Adjust the slider to add more feeds.' :
+                            'Upgrade to add more feeds to your account.'
+                    ]),
+                    $.make('div', { className: 'NB-feedchooser-info-counts' })
                 ])),
                 (this.options.chooser_only && $.make('div', { className: 'NB-feedchooser-info' }, [
                     $.make('h2', { className: 'NB-modal-title' }, [
@@ -756,6 +853,27 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
 
     handle_mousedown: function (elem, e) {
         var self = this;
+        var $target = $(e.target);
+        
+        // Premium multiplier toggle
+        if ($target.hasClass('NB-feedchooser-premium-1x') || $target.hasClass('NB-feedchooser-premium-2x')) {
+            e.preventDefault();
+            $('.NB-feedchooser-premium-multiplier li', this.$modal).removeClass('NB-active');
+            $target.addClass('NB-active');
+            var multiplier = parseInt($target.attr('data-multiplier'));
+            this.update_premium_pricing(multiplier);
+            return;
+        }
+        
+        // Archive multiplier toggle
+        if ($target.hasClass('NB-feedchooser-archive-1x') || $target.hasClass('NB-feedchooser-archive-2x')) {
+            e.preventDefault();
+            $('.NB-feedchooser-archive-multiplier li', this.$modal).removeClass('NB-active');
+            $target.addClass('NB-active');
+            var multiplier = parseInt($target.attr('data-multiplier'));
+            this.update_archive_pricing(multiplier);
+            return;
+        }
 
         $.targetIs(e, { tagSelector: '.NB-modal-submit-save' }, _.bind(function ($t, $p) {
             e.preventDefault();
@@ -835,8 +953,85 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
     },
 
     handle_change: function (elem, e) {
-
-
+        var $target = $(e.target);
+        
+        if ($target.hasClass('NB-feedchooser-pro-slider')) {
+            this.update_pro_pricing($target.val());
+        }
+    },
+    
+    
+    update_pro_pricing: function (feed_count) {
+        // Base price: $29 for 1000 feeds, then $0.03 per additional feed
+        var base_price = 29;
+        var base_feeds = 1000;
+        var price_per_additional_feed = 0.03;
+        
+        var monthly_price = base_price;
+        if (feed_count > base_feeds) {
+            var additional_feeds = feed_count - base_feeds;
+            monthly_price = base_price + Math.ceil(additional_feeds * price_per_additional_feed);
+        }
+        
+        // Update feed count display
+        $('.NB-feedchooser-pro-feed-count', this.$modal).text(this.format_number(feed_count));
+        
+        // Update price display
+        $('.NB-feedchooser-pro-price', this.$modal).text('$' + monthly_price + '/month');
+    },
+    
+    
+    update_premium_pricing: function (multiplier) {
+        var base_price = 36;
+        var base_feeds = 1000;
+        
+        var price = base_price * multiplier;
+        var feeds = base_feeds * multiplier;
+        
+        // Update feed count display
+        $('.NB-feedchooser-premium-feed-count', this.$modal).text(this.format_number(feeds));
+        
+        // Update price display
+        $('.NB-feedchooser-premium-price', this.$modal).text('$' + price + '/year');
+    },
+    
+    update_archive_pricing: function (multiplier) {
+        var base_price = 99;
+        var base_feeds = 1000;
+        
+        var price = base_price * multiplier;
+        var feeds = base_feeds * multiplier;
+        
+        // Update feed count display
+        $('.NB-feedchooser-archive-feed-count', this.$modal).text(this.format_number(feeds));
+        
+        // Update price display
+        $('.NB-feedchooser-archive-price', this.$modal).text('$' + price + '/year');
+    },
+    
+    setup_pro_slider: function () {
+        var self = this;
+        var $slider = $('.NB-feedchooser-pro-slider', this.$modal);
+        
+        if ($slider.length) {
+            // Set initial value based on current feeds for existing users
+            var current_feeds = _.size(NEWSBLUR.assets.feeds);
+            var initial_value = 1000;
+            
+            if (current_feeds > 1000) {
+                // Round up to nearest 500
+                initial_value = Math.ceil(current_feeds / 500) * 500;
+                initial_value = Math.min(initial_value, 10000); // Cap at max
+            }
+            
+            $slider.val(initial_value);
+            this.update_pro_pricing(initial_value);
+            
+            // Add input event for real-time updates
+            $slider.on('input', function() {
+                self.update_pro_pricing($(this).val());
+            });
+        }
     },
 
     handle_cancel: function () {
