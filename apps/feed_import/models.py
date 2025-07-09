@@ -116,6 +116,9 @@ class OPMLImporter(Importer):
     def __init__(self, opml_xml, user):
         self.user = user
         self.opml_xml = opml_xml
+        self.feeds_added = 0
+        self.subscription_limit = user.profile.subscription_limit()
+        self.current_active_subs = UserSubscription.objects.filter(user=user, active=True).count()
 
     @timelimit(10)
     def try_processing(self):
@@ -127,6 +130,7 @@ class OPMLImporter(Importer):
 
         outline = opml.from_string(self.opml_xml)
         folders = self.get_folders()
+        self.skipped_feeds = False
         try:
             folders = self.process_outline(outline, folders)
         except AttributeError:
@@ -191,6 +195,13 @@ class OPMLImporter(Importer):
                     us = None
 
                 if not us:
+                    # Check if user has reached subscription limit
+                    if self.current_active_subs + self.feeds_added >= self.subscription_limit:
+                        # Skip adding more feeds if limit reached
+                        logging.user(self.user, f"~FRReached subscription limit ({self.subscription_limit}) during OPML import, skipping remaining feeds")
+                        self.skipped_feeds = True
+                        continue
+                    
                     us = UserSubscription(
                         feed=feed_db,
                         user=self.user,
@@ -200,10 +211,18 @@ class OPMLImporter(Importer):
                         user_title=user_feed_title,
                     )
                     us.save()
+                    if us.active:
+                        self.feeds_added += 1
 
                 if self.user.profile.is_premium and not us.active:
+                    # Check if activating this feed would exceed limit
+                    if self.current_active_subs + self.feeds_added >= self.subscription_limit:
+                        logging.user(self.user, f"~FRReached subscription limit ({self.subscription_limit}) during OPML import, skipping activation of remaining feeds")
+                        self.skipped_feeds = True
+                        continue
                     us.active = True
                     us.save()
+                    self.feeds_added += 1
                 if not us.needs_unread_recalc:
                     us.needs_unread_recalc = True
                     us.save()

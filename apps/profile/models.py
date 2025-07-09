@@ -80,6 +80,16 @@ class Profile(models.Model):
             " (Premium PRO)" if self.is_pro else "",
         )
 
+    def subscription_limit(self):
+        if self.is_pro:
+            return settings.MAX_SUBSCRIPTIONS_PRO
+        elif self.is_archive:
+            return settings.MAX_SUBSCRIPTIONS_ARCHIVE
+        elif self.is_premium:
+            return settings.MAX_SUBSCRIPTIONS_PREMIUM
+        else:
+            return 64  # Free user limit
+
     @classmethod
     def plan_to_stripe_price(cls, plan):
         price = None
@@ -302,7 +312,7 @@ class Profile(models.Model):
         UserSubscription.schedule_fetch_archive_feeds_for_user(self.user.pk)
 
         subs = UserSubscription.objects.filter(user=self.user)
-        if subs.count() > 2000:
+        if subs.count() > settings.MAX_SUBSCRIPTIONS_ARCHIVE:
             logging.user(self.user, "~FR~SK~FW~SBWARNING! ~FR%s subscriptions~SN!" % (subs.count()))
             mail_admins(
                 f"WARNING! {self.user.username} has {subs.count()} subscriptions",
@@ -374,7 +384,7 @@ class Profile(models.Model):
         EmailNewPremiumPro.delay(user_id=self.user.pk)
 
         subs = UserSubscription.objects.filter(user=self.user)
-        if subs.count() > 1000:
+        if subs.count() > settings.MAX_SUBSCRIPTIONS_PRO:
             logging.user(self.user, "~FR~SK~FW~SBWARNING! ~FR%s subscriptions~SN!" % (subs.count()))
             mail_admins(
                 f"WARNING! {self.user.username} has {subs.count()} subscriptions",

@@ -450,6 +450,21 @@ class UserSubscription(models.Model):
         feed = None
         us = None
 
+        # Check subscription limit
+        active_subs = cls.objects.filter(user=user, active=True).count()
+        subscription_limit = user.profile.subscription_limit()
+        if active_subs >= subscription_limit:
+            code = -1
+            if user.profile.is_pro:
+                message = f"You have reached the maximum limit of {subscription_limit} feeds for Premium Pro accounts."
+            elif user.profile.is_archive:
+                message = f"You have reached the maximum limit of {subscription_limit} feeds for Premium Archive accounts. Please upgrade to Premium Pro to add more feeds."
+            elif user.profile.is_premium:
+                message = f"You have reached the maximum limit of {subscription_limit} feeds for Premium accounts. Please upgrade to Premium Archive to add more feeds."
+            else:
+                message = f"Free accounts are limited to {subscription_limit} feeds. Please upgrade to a premium account to add more feeds."
+            return code, message, None
+
         logging.user(
             user,
             "~FRAdding URL: ~SB%s (in %s) %s"
