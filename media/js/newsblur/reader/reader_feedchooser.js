@@ -35,19 +35,37 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
     runner: function () {
         var self = this;
         this.start = new Date();
-        
+
         // Define format_number method early
-        this.format_number = function(num) {
+        this.format_number = function (num) {
             return parseInt(num).toLocaleString();
         };
-        
+
+        // Determine current plan from globals
+        this.current_plan = 'free';
+        if (NEWSBLUR.Globals.is_pro) {
+            this.current_plan = 'pro';
+        } else if (NEWSBLUR.Globals.is_archive_plus) {
+            this.current_plan = 'archive_plus';
+        } else if (NEWSBLUR.Globals.is_archive) {
+            this.current_plan = 'archive';
+        } else if (NEWSBLUR.Globals.is_premium_plus) {
+            this.current_plan = 'premium_plus';
+        } else if (NEWSBLUR.Globals.is_premium) {
+            this.current_plan = 'premium';
+        }
+
         // Set feed limits based on user type
         if (NEWSBLUR.Globals.is_pro) {
             // Pro users have a sliding scale
             var current_feeds = _.size(NEWSBLUR.assets.feeds);
-            this.MAX_FEEDS = 1000 + Math.max(0, Math.floor((current_feeds - 1000) / 500) + 1) * 500;
+            this.MAX_FEEDS = 1000 + Math.max(0, Math.floor((current_feeds - 1000) / 1000) + 1) * 1000;
+        } else if (NEWSBLUR.Globals.is_archive_plus) {
+            this.MAX_FEEDS = 5000;
         } else if (NEWSBLUR.Globals.is_archive) {
             this.MAX_FEEDS = 1000;
+        } else if (NEWSBLUR.Globals.is_premium_plus) {
+            this.MAX_FEEDS = 5000;
         } else if (NEWSBLUR.Globals.is_premium) {
             this.MAX_FEEDS = 1000;
         } else {
@@ -64,9 +82,12 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
         if (!this.options.premium_only) {
             this.initial_load_feeds();
         }
-        
+
         // Initialize pro slider if applicable
         this.setup_pro_slider();
+
+        // Initialize segmented controls based on current plan
+        this.initialize_segmented_controls();
 
         _.defer(_.bind(function () { this.update_counts(true); }, this));
 
@@ -108,11 +129,16 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                                         'Follow up to ',
                                         $.make('span', { className: 'NB-feedchooser-premium-feed-count' }, '1,000'),
                                         ' sites'
+                                    ]),
+                                    $.make('div', { className: 'NB-feedchooser-premium-current-usage' }, [
+                                        'Currently following ',
+                                        $.make('span', { className: 'NB-feedchooser-premium-current-feeds' }, this.format_number(_.size(NEWSBLUR.assets.feeds))),
+                                        ' sites'
                                     ])
                                 ]),
                                 $.make('div', { className: 'NB-feedchooser-premium-toggle-wrapper' }, [
                                     $.make('ul', { className: 'segmented-control NB-feedchooser-premium-multiplier' }, [
-                                        $.make('li', { className: 'NB-feedchooser-premium-1x NB-active', 'data-multiplier': '1' }, 'Standard'),
+                                        $.make('li', { className: 'NB-feedchooser-premium-1x NB-active', 'data-multiplier': '1' }, 'Premium'),
                                         $.make('li', { className: 'NB-feedchooser-premium-2x', 'data-multiplier': '2' }, 'Premium Plus')
                                     ])
                                 ])
@@ -232,14 +258,19 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                             $.make('div', { className: 'NB-feedchooser-archive-toggle-content' }, [
                                 $.make('div', { className: 'NB-feedchooser-archive-toggle-text' }, [
                                     $.make('b', [
-                                        'Follow up to ',
+                                        'Follow and fully archive up to ',
                                         $.make('span', { className: 'NB-feedchooser-archive-feed-count' }, '1,000'),
+                                        ' sites'
+                                    ]),
+                                    $.make('div', { className: 'NB-feedchooser-archive-current-usage' }, [
+                                        'Currently following ',
+                                        $.make('span', { className: 'NB-feedchooser-archive-current-feeds' }, this.format_number(_.size(NEWSBLUR.assets.feeds))),
                                         ' sites'
                                     ])
                                 ]),
                                 $.make('div', { className: 'NB-feedchooser-archive-toggle-wrapper' }, [
                                     $.make('ul', { className: 'segmented-control NB-feedchooser-archive-multiplier' }, [
-                                        $.make('li', { className: 'NB-feedchooser-archive-1x NB-active', 'data-multiplier': '1' }, 'Standard'),
+                                        $.make('li', { className: 'NB-feedchooser-archive-1x NB-active', 'data-multiplier': '1' }, 'Premium Archive'),
                                         $.make('li', { className: 'NB-feedchooser-archive-2x', 'data-multiplier': '2' }, 'Premium Archive Plus')
                                     ])
                                 ])
@@ -345,35 +376,46 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                     $.make('div', { className: 'NB-feedchooser-info' }, [
                         $.make('div', { className: 'NB-feedchooser-info-type' }, [
                             'Premium Pro Subscription',
-                            $.make('span', { className: 'NB-feedchooser-subtitle-type-price NB-feedchooser-pro-price' }, '$29/month'),
+                            $.make('span', { className: 'NB-feedchooser-subtitle-type-price NB-feedchooser-pro-price' }, '$' + this.calculate_pro_price_for_feeds(_.size(NEWSBLUR.assets.feeds)) + '/month'),
                         ])
                     ]),
                     $.make('ul', { className: 'NB-feedchooser-premium-bullets NB-feedchooser-premium-pro-bullets' }, [
                         $.make('li', { className: 'NB-0 NB-feedchooser-pro-slider-container' }, [
                             $.make('div', { className: 'NB-feedchooser-premium-bullet-image' }),
                             $.make('div', { className: 'NB-feedchooser-pro-slider-content' }, [
-                                $.make('b', 'Follow up to '),
-                                $.make('span', { className: 'NB-feedchooser-pro-feed-count' }, '1,000'),
-                                $.make('b', ' sites'),
-                                $.make('div', { className: 'NB-feedchooser-pro-slider-wrapper' }, [
-                                    $.make('input', { 
-                                        type: 'range', 
-                                        className: 'NB-feedchooser-pro-slider',
-                                        min: '1000',
-                                        max: '10000',
-                                        step: '500',
-                                        value: '1000'
-                                    }),
-                                    $.make('div', { className: 'NB-feedchooser-pro-slider-labels' }, [
-                                        $.make('span', { className: 'NB-feedchooser-pro-slider-min' }, '1,000'),
-                                        $.make('span', { className: 'NB-feedchooser-pro-slider-max' }, '10,000')
+                                $.make('div', { className: 'NB-feedchooser-pro-slider-header' }, [
+                                    $.make('b', 'Follow up to '),
+                                    $.make('span', { className: 'NB-feedchooser-pro-feed-count' }, '1,000'),
+                                    $.make('b', ' sites in real-time'),
+                                    $.make('div', { className: 'NB-feedchooser-pro-current-usage' }, [
+                                        'Currently following ',
+                                        $.make('span', { className: 'NB-feedchooser-pro-current-feeds' }, this.format_number(_.size(NEWSBLUR.assets.feeds))),
+                                        ' sites'
                                     ])
-                                ])
+                                ]),
+                                $.make('div', { className: 'NB-feedchooser-pro-slider-wrapper' }, [
+                                    $.make('div', { className: 'NB-feedchooser-pro-slider-container' }, [
+                                        $.make('input', {
+                                            type: 'range',
+                                            className: 'NB-feedchooser-pro-slider',
+                                            min: '1000',
+                                            max: '10000',
+                                            step: '1000',
+                                            value: '1000'
+                                        }),
+                                        $.make('div', { className: 'NB-feedchooser-pro-slider-labels' }, [
+                                            $.make('span', { className: 'NB-feedchooser-pro-slider-min' }, '1,000'),
+                                            $.make('span', { className: 'NB-feedchooser-pro-slider-max' }, '10,000')
+                                        ])
+                                    ]),
+                                    $.make('div', { className: 'NB-feedchooser-pro-slider-price' }, '$29/month')
+                                ]),
+                                $.make('div', { className: 'NB-feedchooser-pro-usage-note' }, 'Pay only for what you use — billing automatically adjusts as you add or remove feeds')
                             ])
                         ]),
                         $.make('li', { className: 'NB-1' }, [
                             $.make('div', { className: 'NB-feedchooser-premium-bullet-image' }),
-                            'Everything in the premium archive subscription, of course'
+                            'Everything in the premium archive subscription'
                         ]),
                         $.make('li', { className: 'NB-2' }, [
                             $.make('div', { className: 'NB-feedchooser-premium-bullet-image' }),
@@ -387,7 +429,9 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                                 $.make('div', {
                                     className: "NB-provider-button-pro NB-modal-submit-button NB-modal-submit-green"
                                 }, [
-                                    "Upgrade to Premium Pro",
+                                    "Upgrade to ",
+                                    $.make('br'),
+                                    " Premium Pro",
                                     (NEWSBLUR.Globals.active_provider == "paypal" && " with PayPal")
                                 ]),
                                 this.make_premium_pro_prorate_message(),
@@ -468,20 +512,20 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
                     $.make('div', { className: 'NB-feedchooser-info-type' }, [
                         $.make('span', { className: 'NB-feedchooser-info-type-name' },
                             NEWSBLUR.Globals.is_pro ? 'PREMIUM PRO ACCOUNT' :
-                            NEWSBLUR.Globals.is_archive ? 'PREMIUM ARCHIVE ACCOUNT' :
-                            'PREMIUM ACCOUNT'
+                                NEWSBLUR.Globals.is_archive ? 'PREMIUM ARCHIVE ACCOUNT' :
+                                    'PREMIUM ACCOUNT'
                         ),
-                        $.make('span', { className: 'NB-feedchooser-subtitle-type-price' }, 
+                        $.make('span', { className: 'NB-feedchooser-subtitle-type-price' },
                             NEWSBLUR.Globals.is_pro ? '$29/MONTH' :
-                            NEWSBLUR.Globals.is_archive ? '$99/YEAR' :
-                            '$36/YEAR'),
+                                NEWSBLUR.Globals.is_archive ? '$99/YEAR' :
+                                    '$36/YEAR'),
                     ]),
                     $.make('h2', { className: 'NB-modal-subtitle' }, [
                         $.make('b', [
                             'You can follow up to ' + this.format_number(this.MAX_FEEDS) + ' sites.'
                         ]),
                         $.make('br'),
-                        NEWSBLUR.Globals.is_pro ? 
+                        NEWSBLUR.Globals.is_pro ?
                             'Adjust the slider to add more feeds.' :
                             'Upgrade to add more feeds to your account.'
                     ]),
@@ -633,20 +677,20 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
         var $feedsContainer = $('#NB-feedchooser-feeds', this.$modal);
         var $modalParent = this.$modal.parent();
         var modalParentHeight = $modalParent.height();
-        
+
         // Calculate space taken by other elements in the left column
         var headerHeight = $('.NB-feedchooser-info', $left).outerHeight(true) || 0;
         var formHeight = $('.NB-feedchooser-form', $left).outerHeight(true) || 0;
         var modalPadding = parseInt(this.$modal.css('padding-top')) + parseInt(this.$modal.css('padding-bottom')) || 0;
         var containerMargins = parseInt($feedsContainer.css('margin-top')) + parseInt($feedsContainer.css('margin-bottom')) || 0;
         var padding = 60; // Additional buffer for spacing
-        
+
         // Calculate available height for feeds container
         var availableHeight = modalParentHeight - headerHeight - formHeight - modalPadding - containerMargins - padding;
-        
-        console.log('Resize modal - modalParentHeight:', modalParentHeight, 'headerHeight:', headerHeight, 
-                    'formHeight:', formHeight, 'availableHeight:', availableHeight);
-        
+
+        console.log('Resize modal - modalParentHeight:', modalParentHeight, 'headerHeight:', headerHeight,
+            'formHeight:', formHeight, 'availableHeight:', availableHeight);
+
         // Set max-height on the feeds container
         if (availableHeight > 200) {
             $feedsContainer.css({ 'max-height': availableHeight + 'px' });
@@ -870,7 +914,7 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
     handle_mousedown: function (elem, e) {
         var self = this;
         var $target = $(e.target);
-        
+
         // Premium multiplier toggle
         if ($target.hasClass('NB-feedchooser-premium-1x') || $target.hasClass('NB-feedchooser-premium-2x')) {
             e.preventDefault();
@@ -880,7 +924,7 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
             this.update_premium_pricing(multiplier);
             return;
         }
-        
+
         // Archive multiplier toggle
         if ($target.hasClass('NB-feedchooser-archive-1x') || $target.hasClass('NB-feedchooser-archive-2x')) {
             e.preventDefault();
@@ -970,85 +1014,223 @@ _.extend(NEWSBLUR.ReaderFeedchooser.prototype, {
 
     handle_change: function (elem, e) {
         var $target = $(e.target);
-        
+
         if ($target.hasClass('NB-feedchooser-pro-slider')) {
-            this.update_pro_pricing($target.val());
+            var current_feeds = _.size(NEWSBLUR.assets.feeds);
+            this.update_pro_pricing_with_current($target.val(), current_feeds);
         }
     },
-    
-    
+
+
     update_pro_pricing: function (feed_count) {
-        // Base price: $29 for 1000 feeds, then $0.03 per additional feed
+        // Linear pricing: $29 for 1000 feeds to $299 for 10000 feeds
+        // That's $270 for 9000 feeds = $30 per 1000 feeds
         var base_price = 29;
-        var base_feeds = 1000;
-        var price_per_additional_feed = 0.03;
-        
-        var monthly_price = base_price;
-        if (feed_count > base_feeds) {
-            var additional_feeds = feed_count - base_feeds;
-            monthly_price = base_price + Math.ceil(additional_feeds * price_per_additional_feed);
-        }
-        
+        var price_per_thousand = 30;
+
+        var thousands = feed_count / 1000;
+        var monthly_price = base_price + (thousands - 1) * price_per_thousand;
+
         // Update feed count display
         $('.NB-feedchooser-pro-feed-count', this.$modal).text(this.format_number(feed_count));
-        
-        // Update price display
-        $('.NB-feedchooser-pro-price', this.$modal).text('$' + monthly_price + '/month');
+
+        // Update slider price display
+        $('.NB-feedchooser-pro-slider-price', this.$modal).text('$' + monthly_price + '/month');
+
+        // Note: We don't update .NB-feedchooser-pro-price (header) as it should show current actual price
     },
-    
-    
+
+    update_pro_pricing_with_current: function (slider_value, current_feeds) {
+        // Calculate price for slider position
+        var slider_price = this.calculate_pro_price_for_feeds(slider_value);
+
+        // Update displays
+        $('.NB-feedchooser-pro-feed-count', this.$modal).text(this.format_number(slider_value));
+        $('.NB-feedchooser-pro-slider-price', this.$modal).text('$' + slider_price + '/month');
+    },
+
+    calculate_pro_price_for_feeds: function (feed_count) {
+        // Linear pricing: $29 for 1000 feeds to $299 for 10000 feeds
+        // That's $270 for 9000 feeds = $30 per 1000 feeds
+        var base_price = 29;
+        var price_per_thousand = 30;
+
+        // Round up to nearest 1000 for pricing
+        var thousands = Math.ceil(feed_count / 1000);
+        var monthly_price = base_price + (thousands - 1) * price_per_thousand;
+        return monthly_price;
+    },
+
+
     update_premium_pricing: function (multiplier) {
         var base_price = 36;
         var standard_feeds = 1000;
         var plus_feeds = 5000;
-        
+        var current_feeds = _.size(NEWSBLUR.assets.feeds);
+
         var price = base_price * multiplier;
         var feeds = multiplier === 1 ? standard_feeds : plus_feeds;
-        
+
         // Update feed count display
         $('.NB-feedchooser-premium-feed-count', this.$modal).text(this.format_number(feeds));
-        
+
         // Update price display
         $('.NB-feedchooser-premium-price', this.$modal).text('$' + price + '/year');
+
+        // Update current feeds display and check if over limit
+        var $currentFeeds = $('.NB-feedchooser-premium-current-feeds', this.$modal);
+        if (current_feeds > feeds) {
+            $currentFeeds.addClass('NB-over-limit');
+        } else {
+            $currentFeeds.removeClass('NB-over-limit');
+        }
+
+        // Update header title
+        var headerTitle = multiplier === 1 ? 'Premium Subscription' : 'Premium Plus Subscription';
+        var $premiumHeader = this.$modal.find('.NB-feedchooser-premium-plan').first().find('.NB-feedchooser-info-type').first();
+        $premiumHeader.contents().filter(function () {
+            return this.nodeType === 3; // Text node
+        }).first().replaceWith(headerTitle);
+
+        // Update switch plans button text  
+        var targetPlan = multiplier === 1 ? 'premium' : 'premium_plus';
+        var planName = multiplier === 1 ? "premium subscription" : "premium plus subscription";
+
+        // Find the premium button in the premium plan section
+        var $premiumSection = this.$modal.find('.NB-feedchooser-premium-plan').first();
+        var $button = $premiumSection.find('.NB-provider-button-premium');
+
+        if ($button.length) {
+            var currentText = $button.text().trim();
+            var isCurrentPlan = (this.current_plan === targetPlan);
+
+            // Update based on user status
+            if (!NEWSBLUR.Globals.is_premium) {
+                // Free users always see "Upgrade"
+                var upgradeName = multiplier === 1 ? "Premium" : "Premium Plus";
+                $button.text('Upgrade to ' + upgradeName);
+            } else if (isCurrentPlan) {
+                // Same plan = Restart
+                $button.text('Restart your ' + planName);
+            } else {
+                // Different plan = Switch
+                $button.text('Switch plans to a ' + planName);
+            }
+        }
     },
-    
+
     update_archive_pricing: function (multiplier) {
         var base_price = 99;
         var standard_feeds = 1000;
         var plus_feeds = 5000;
-        
+        var current_feeds = _.size(NEWSBLUR.assets.feeds);
+
         var price = base_price * multiplier;
         var feeds = multiplier === 1 ? standard_feeds : plus_feeds;
-        
+
         // Update feed count display
         $('.NB-feedchooser-archive-feed-count', this.$modal).text(this.format_number(feeds));
-        
+
         // Update price display
         $('.NB-feedchooser-archive-price', this.$modal).text('$' + price + '/year');
+
+        // Update current feeds display and check if over limit
+        var $currentFeeds = $('.NB-feedchooser-archive-current-feeds', this.$modal);
+        if (current_feeds > feeds) {
+            $currentFeeds.addClass('NB-over-limit');
+        } else {
+            $currentFeeds.removeClass('NB-over-limit');
+        }
+
+        // Update header title
+        var headerTitle = multiplier === 1 ? 'Premium Archive Subscription' : 'Premium Archive Plus';
+        var $archiveHeader = this.$modal.find('.NB-feedchooser-premium-archive-bullets').closest('.NB-feedchooser-premium-plan').find('.NB-feedchooser-info-type').first();
+        $archiveHeader.contents().filter(function () {
+            return this.nodeType === 3; // Text node
+        }).first().replaceWith(headerTitle);
+
+        // Update switch plans button text
+        var targetPlan = multiplier === 1 ? 'archive' : 'archive_plus';
+        var planName = multiplier === 1 ? "premium archive subscription" : "premium archive plus subscription";
+        var upgradeName = multiplier === 1 ? "Premium Archive" : "Premium Archive Plus";
+
+        // Find the archive button in the archive plan section
+        var $archiveSection = this.$modal.find('.NB-feedchooser-premium-archive-bullets').closest('.NB-feedchooser-premium-plan');
+        var $button = $archiveSection.find('.NB-provider-button-archive');
+
+        if ($button.length) {
+            var currentText = $button.text().trim();
+            var isCurrentPlan = (this.current_plan === targetPlan);
+
+            // Update based on user status
+            if (!NEWSBLUR.Globals.is_archive) {
+                // Non-archive users see "Upgrade" or "Switch"
+                if (!NEWSBLUR.Globals.is_premium) {
+                    $button.text('Upgrade to ' + upgradeName);
+                } else {
+                    $button.text('Switch plans to a ' + planName);
+                }
+            } else if (isCurrentPlan) {
+                // Same plan = Restart
+                $button.text('Restart your ' + planName);
+            } else {
+                // Different plan = Switch
+                $button.text('Switch plans to a ' + planName);
+            }
+        }
     },
-    
+
     setup_pro_slider: function () {
         var self = this;
         var $slider = $('.NB-feedchooser-pro-slider', this.$modal);
-        
+
         if ($slider.length) {
-            // Set initial value based on current feeds for existing users
+            // Set initial value based on current feeds
             var current_feeds = _.size(NEWSBLUR.assets.feeds);
-            var initial_value = 1000;
-            
+            var slider_value = 1000;
+
             if (current_feeds > 1000) {
-                // Round up to nearest 500
-                initial_value = Math.ceil(current_feeds / 500) * 500;
-                initial_value = Math.min(initial_value, 10000); // Cap at max
+                // Round up to nearest 1000
+                slider_value = Math.ceil(current_feeds / 1000) * 1000;
+                slider_value = Math.min(slider_value, 10000); // Cap at max
             }
-            
-            $slider.val(initial_value);
-            this.update_pro_pricing(initial_value);
-            
+
+            $slider.val(slider_value);
+            this.update_pro_pricing_with_current(slider_value, current_feeds);
+
             // Add input event for real-time updates
-            $slider.on('input', function() {
-                self.update_pro_pricing($(this).val());
+            $slider.on('input', function () {
+                self.update_pro_pricing_with_current($(this).val(), current_feeds);
             });
+        }
+    },
+
+    initialize_segmented_controls: function () {
+        var self = this;
+        var current_feeds = _.size(NEWSBLUR.assets.feeds);
+
+        // Initialize premium segmented control
+        if ($('.NB-feedchooser-premium-multiplier', this.$modal).length) {
+            // Auto-select Plus if user has over 1000 feeds, unless they're already on standard premium
+            if (this.current_plan === 'premium_plus' || (current_feeds > 1000 && this.current_plan !== 'premium')) {
+                $('.NB-feedchooser-premium-1x', this.$modal).removeClass('NB-active');
+                $('.NB-feedchooser-premium-2x', this.$modal).addClass('NB-active');
+                this.update_premium_pricing(2);
+            } else {
+                this.update_premium_pricing(1);
+            }
+        }
+
+        // Initialize archive segmented control
+        if ($('.NB-feedchooser-archive-multiplier', this.$modal).length) {
+            // Auto-select Plus if user has over 1000 feeds, unless they're already on standard archive
+            if (this.current_plan === 'archive_plus' || (current_feeds > 1000 && this.current_plan !== 'archive')) {
+                $('.NB-feedchooser-archive-1x', this.$modal).removeClass('NB-active');
+                $('.NB-feedchooser-archive-2x', this.$modal).addClass('NB-active');
+                this.update_archive_pricing(2);
+            } else {
+                this.update_archive_pricing(1);
+            }
         }
     },
 

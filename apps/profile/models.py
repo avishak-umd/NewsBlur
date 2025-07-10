@@ -82,13 +82,13 @@ class Profile(models.Model):
 
     def subscription_limit(self):
         if self.is_pro:
-            # Pro users get sliding scale: 1000 base + 500 for each 500 feeds they have
+            # Pro users get sliding scale: 1000 base + 1000 for each 1000 feeds they have
             from apps.reader.models import UserSubscription
 
             current_subs = UserSubscription.objects.filter(user=self.user).count()
-            # Calculate how many 500-feed increments they need
-            increments = max(0, (current_subs - settings.MAX_SUBSCRIPTIONS_PRO) // 500) + 1
-            return settings.MAX_SUBSCRIPTIONS_PRO + (increments * 500)
+            # Calculate how many 1000-feed increments they need
+            increments = max(0, (current_subs - settings.MAX_SUBSCRIPTIONS_PRO) // 1000) + 1
+            return settings.MAX_SUBSCRIPTIONS_PRO + (increments * 1000)
         elif self.is_archive:
             return settings.MAX_SUBSCRIPTIONS_ARCHIVE
         elif self.is_premium:

@@ -12729,9 +12729,36 @@ form.opml_import_form input {
     width: 100%;
 }
 
+.NB-feedchooser-pro-slider-header {
+    margin-bottom: 8px;
+}
+
+.NB-feedchooser-pro-usage-note {
+    font-size: 11px;
+    color: #666;
+    font-weight: normal;
+    margin-top: 12px;
+    text-align: left;
+    padding-left: 8px;
+}
+
+.NB-feedchooser-pro-current-usage {
+    font-size: 11px;
+    color: #666;
+    font-weight: normal;
+    margin-top: 4px;
+}
+
 .NB-feedchooser-pro-slider-wrapper {
     margin-top: 12px;
     padding: 0 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.NB-feedchooser-pro-slider-container {
+    flex: 1;
 }
 
 .NB-feedchooser-pro-slider {
@@ -12753,7 +12780,7 @@ form.opml_import_form input {
     background: #2BB24C;
     cursor: pointer;
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .NB-feedchooser-pro-slider::-moz-range-thumb {
@@ -12762,7 +12789,7 @@ form.opml_import_form input {
     background: #2BB24C;
     cursor: pointer;
     border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     border: none;
 }
 
@@ -12774,9 +12801,46 @@ form.opml_import_form input {
     margin-top: 2px;
 }
 
+.NB-feedchooser-pro-slider-price {
+    font-size: 14px;
+    color: #2BB24C;
+    font-weight: bold;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+    min-width: 100px;
+    text-align: right;
+}
+
 .NB-feedchooser-pro-feed-count {
     font-weight: bold;
     color: #2BB24C;
+}
+
+.NB-feedchooser-pro-current-feeds,
+.NB-feedchooser-pro-current-price {
+    font-weight: bold;
+    color: #2BB24C;
+}
+
+.NB-feedchooser-premium-current-usage,
+.NB-feedchooser-archive-current-usage {
+    font-size: 11px;
+    color: #666;
+    font-weight: normal;
+    margin-top: 4px;
+}
+
+.NB-feedchooser-premium-current-feeds,
+.NB-feedchooser-archive-current-feeds {
+    font-weight: bold;
+    color: #2BB24C;
+}
+
+/* When user has too many feeds for selected tier */
+.NB-feedchooser-premium-current-feeds.NB-over-limit,
+.NB-feedchooser-archive-current-feeds.NB-over-limit {
+    color: #D73502;
 }
 
 /* Premium and Archive Toggle Styles */
@@ -12848,12 +12912,12 @@ form.opml_import_form input {
 .NB-feedchooser-archive-multiplier li.NB-active {
     background: #2BB24C;
     color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .NB-feedchooser-premium-multiplier li:hover:not(.NB-active),
 .NB-feedchooser-archive-multiplier li:hover:not(.NB-active) {
-    background: rgba(255,255,255,0.5);
+    background: rgba(255, 255, 255, 0.5);
 }
 
 .NB-feedchooser-premium-feed-count,
@@ -12983,6 +13047,21 @@ form.opml_import_form input {
 .NB-feedchooser-premium-archive-bullets li.NB-7 .NB-feedchooser-premium-bullet-image,
 .NB-welcome-premium-archive-bullet.NB-7 {
     background: transparent url('/media/embed/icons/icons8/icons8-calendar-100.png') no-repeat 0 0;
+    background-size: 16px;
+}
+
+.NB-feedchooser-premium-pro-bullets li.NB-0 .NB-feedchooser-premium-bullet-image {
+    background: transparent url('/media/embed/icons/icons8/icons8-sheets-100.png') no-repeat 0 0;
+    background-size: 16px;
+}
+
+.NB-feedchooser-premium-pro-bullets li.NB-1 .NB-feedchooser-premium-bullet-image {
+    background: transparent url('/media/embed/icons/icons8/icons8-bursts-100.png') no-repeat 0 0;
+    background-size: 16px;
+}
+
+.NB-feedchooser-premium-pro-bullets li.NB-2 .NB-feedchooser-premium-bullet-image {
+    background: transparent url('/media/embed/icons/icons8/icons8-stopwatch-100.png') no-repeat 0 0;
     background-size: 16px;
 }
 
